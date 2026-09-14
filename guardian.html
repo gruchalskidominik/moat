@@ -7,47 +7,72 @@
 <title>Moat — Guardian</title>
 <style>
   body{margin:0;background:#0c0c0d;color:#f3f2ee;font:17px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
-  main{max-width:520px;margin:0 auto;padding:56px 24px;text-align:center}
+  main{max-width:520px;margin:0 auto;padding:48px 24px 64px;text-align:center}
   h1{font-size:28px;letter-spacing:-.6px;margin:0 0 6px}
   p{color:#c9c8c2;margin:0 0 16px}
   .muted{color:#7e7e86;font-size:14px}
-  .code{font-size:64px;font-weight:300;letter-spacing:10px;font-variant-numeric:tabular-nums;margin:40px 0 8px;color:#f3f2ee}
-  .ring{height:3px;background:#26262a;border-radius:99px;overflow:hidden;margin:0 auto 32px;max-width:280px}
-  .fill{height:3px;background:#6f8fa8;width:100%;transition:width 1s linear}
+  .status{display:inline-flex;align-items:center;gap:8px;border:1px solid #26262a;border-radius:999px;padding:6px 14px;font-size:14px;color:#c9c8c2;margin:8px 0 28px}
+  .dot{width:8px;height:8px;border-radius:4px;background:#4a4a50}
+  .dot.ok{background:#7fa88f}.dot.warn{background:#c86b5e}
+  .code{font-size:64px;font-weight:300;letter-spacing:10px;font-variant-numeric:tabular-nums;margin:8px 0 4px;color:#f3f2ee;min-height:80px}
+  .gen{background:#f3f2ee;color:#0c0c0d;border:0;border-radius:14px;height:56px;padding:0 28px;font:600 17px -apple-system,sans-serif;margin:16px 0 8px;cursor:pointer}
+  .gen:active{opacity:.7}
   .box{border:1px solid #26262a;border-radius:16px;padding:20px;text-align:left;background:#151517;margin-top:32px}
   .box p{margin:0 0 10px;font-size:15px}
-  button{background:#f3f2ee;color:#0c0c0d;border:0;border-radius:12px;height:48px;padding:0 20px;font:600 16px -apple-system,sans-serif;margin-top:8px}
   .err{color:#c86b5e}
+  a{color:#6f8fa8}
+  .cta{margin-top:28px;font-size:14px;color:#7e7e86}
 </style>
 </head>
 <body>
 <main>
   <h1 id="title">Moat guardian</h1>
-  <p id="sub" class="muted">You hold the key to someone's walls.</p>
+  <p id="sub" class="muted"></p>
+  <div class="status"><span class="dot" id="dot"></span><span id="statusText">…</span></div>
   <div id="app">
     <div class="code" id="code">······</div>
-    <div class="ring"><div class="fill" id="fill"></div></div>
-    <p class="muted" id="left">Reading link…</p>
-    <button id="copy" hidden>Copy code</button>
+    <p class="muted" id="hint"></p>
+    <button class="gen" id="gen"></button>
+    <p class="muted" id="left"></p>
   </div>
   <div class="box">
-    <p><strong>How this works</strong></p>
-    <p>A friend uses Moat to block distracting apps. When they want to unlock, disable a wall, or turn guardian mode off, they need the 6-digit code shown here.</p>
-    <p>Read it to them only if you think they should have it. Codes change every 30 seconds. Keep this link private — anyone who has it can generate codes.</p>
-    <p class="muted">Nothing is sent anywhere. The code is computed in your browser from the link itself.</p>
+    <p><strong id="howTitle"></strong></p>
+    <p id="how1"></p>
+    <p id="how2"></p>
+    <p class="muted" id="how3"></p>
   </div>
+  <p class="cta" id="cta"></p>
 </main>
 <script>
 (async () => {
   const B32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  const BEATS = "https://ridvfmatxkgmnkyvndeu.supabase.co/rest/v1/moat_beats";
+  const KEY = "sb_publishable_AYY6ozK1vI0Dlna1Ujyqjw_RqoP_lxD";
+  const I18N = {
+    en: { sub: (n) => n ? `You hold the key to ${n}'s walls.` : "You hold the key to someone's walls.", gen: "Generate code", hint: "One code at a time. It stays valid until a newer one is used.", made: (t) => `Generated at ${t}. Read it out loud — or don't.`, howTitle: "How this works", how1: "A friend uses Moat to block distracting apps. To unlock, disable a wall, or turn guardian mode off, they need a code from you.", how2: "Press the button only if you think they should have it. Each code works once. Keep this link private — anyone with it can generate codes.", how3: "Nothing personal is sent anywhere. The code is computed in your browser from the link itself.", okNow: (ago) => `Moat intact · seen ${ago}`, revoked: (ago) => `Screen Time access removed ${ago}`, silent: (ago) => `No signal for ${ago} — phone off, or Moat removed. Ask.`, none: "No signal yet", off: "Guardian mode was turned off with your code", err: "Couldn't check status", nokey: "This link is missing its key. Ask for it to be sent again.", nocrypto: "This browser can't compute codes. Try Safari or Chrome.", cta: "Want your own moat? Moat for iPhone — coming to the App Store.", ago: (m) => m < 1 ? "just now" : m < 60 ? `${m} min ago` : m < 2880 ? `${Math.round(m/60)} h ago` : `${Math.round(m/1440)} days ago` },
+    pl: { sub: (n) => n ? `Trzymasz klucz do murów ${n}.` : "Trzymasz klucz do czyichś murów.", gen: "Wygeneruj kod", hint: "Jeden kod naraz. Działa, dopóki nie zostanie użyty nowszy.", made: (t) => `Wygenerowany o ${t}. Przeczytaj go — albo nie.`, howTitle: "Jak to działa", how1: "Znajomy używa Moat, żeby blokować rozpraszające aplikacje. Żeby odblokować, wyłączyć mur albo tryb opiekuna, potrzebuje kodu od Ciebie.", how2: "Naciśnij przycisk tylko wtedy, gdy uważasz, że powinien go dostać. Każdy kod działa raz. Nie udostępniaj tego linku — każdy, kto go ma, może generować kody.", how3: "Nic osobistego nie jest nigdzie wysyłane. Kod liczy się w Twojej przeglądarce z samego linku.", okNow: (ago) => `Fosa cała · sygnał ${ago}`, revoked: (ago) => `Dostęp do Czasu przed ekranem cofnięty ${ago}`, silent: (ago) => `Brak sygnału od ${ago} — telefon wyłączony albo Moat usunięty. Zapytaj.`, none: "Jeszcze brak sygnału", off: "Tryb opiekuna wyłączony Twoim kodem", err: "Nie udało się sprawdzić stanu", nokey: "W linku brakuje klucza. Poproś o wysłanie go jeszcze raz.", nocrypto: "Ta przeglądarka nie potrafi liczyć kodów. Spróbuj Safari lub Chrome.", cta: "Chcesz własną fosę? Moat na iPhone — wkrótce w App Store.", ago: (m) => m < 1 ? "przed chwilą" : m < 60 ? `${m} min temu` : m < 2880 ? `${Math.round(m/60)} h temu` : `${Math.round(m/1440)} dni temu` },
+    de: { sub: (n) => n ? `Du hältst den Schlüssel zu ${n}s Mauern.` : "Du hältst den Schlüssel zu jemandes Mauern.", gen: "Code erzeugen", hint: "Ein Code auf einmal. Er gilt, bis ein neuerer benutzt wird.", made: (t) => `Erzeugt um ${t}. Lies ihn vor — oder nicht.`, howTitle: "So funktioniert es", how1: "Ein Freund nutzt Moat, um ablenkende Apps zu sperren. Zum Entsperren, Deaktivieren einer Mauer oder Abschalten des Wächtermodus braucht er einen Code von dir.", how2: "Drücke nur, wenn du findest, dass er ihn bekommen sollte. Jeder Code gilt einmal. Halte diesen Link privat.", how3: "Nichts Persönliches wird gesendet. Der Code wird in deinem Browser aus dem Link berechnet.", okNow: (ago) => `Moat intakt · gesehen ${ago}`, revoked: (ago) => `Bildschirmzeit-Zugriff entfernt ${ago}`, silent: (ago) => `Kein Signal seit ${ago} — Handy aus oder Moat gelöscht. Frag nach.`, none: "Noch kein Signal", off: "Wächtermodus wurde mit deinem Code beendet", err: "Status nicht abrufbar", nokey: "Dem Link fehlt der Schlüssel. Lass ihn dir erneut schicken.", nocrypto: "Dieser Browser kann keine Codes berechnen. Versuche Safari oder Chrome.", cta: "Willst du deinen eigenen Burggraben? Moat für iPhone — bald im App Store.", ago: (m) => m < 1 ? "gerade eben" : m < 60 ? `vor ${m} Min.` : m < 2880 ? `vor ${Math.round(m/60)} Std.` : `vor ${Math.round(m/1440)} Tagen` },
+    es: { sub: (n) => n ? `Tienes la llave de los muros de ${n}.` : "Tienes la llave de los muros de alguien.", gen: "Generar código", hint: "Un código a la vez. Vale hasta que se use uno más nuevo.", made: (t) => `Generado a las ${t}. Léelo en voz alta — o no.`, howTitle: "Cómo funciona", how1: "Un amigo usa Moat para bloquear apps que distraen. Para desbloquear, apagar un muro o desactivar el modo guardián necesita un código tuyo.", how2: "Pulsa solo si crees que debería tenerlo. Cada código sirve una vez. No compartas este enlace.", how3: "No se envía nada personal. El código se calcula en tu navegador a partir del enlace.", okNow: (ago) => `Moat intacto · visto ${ago}`, revoked: (ago) => `Acceso a Tiempo de uso retirado ${ago}`, silent: (ago) => `Sin señal desde ${ago} — móvil apagado o Moat borrado. Pregunta.`, none: "Aún sin señal", off: "El modo guardián se desactivó con tu código", err: "No se pudo comprobar el estado", nokey: "Al enlace le falta la clave. Pide que te lo envíen de nuevo.", nocrypto: "Este navegador no puede calcular códigos. Prueba Safari o Chrome.", cta: "¿Quieres tu propio foso? Moat para iPhone — pronto en el App Store.", ago: (m) => m < 1 ? "ahora mismo" : m < 60 ? `hace ${m} min` : m < 2880 ? `hace ${Math.round(m/60)} h` : `hace ${Math.round(m/1440)} días` },
+    fr: { sub: (n) => n ? `Tu détiens la clé des murs de ${n}.` : "Tu détiens la clé des murs de quelqu'un.", gen: "Générer un code", hint: "Un code à la fois. Il reste valable jusqu'à ce qu'un plus récent soit utilisé.", made: (t) => `Généré à ${t}. Lis-le à voix haute — ou pas.`, howTitle: "Comment ça marche", how1: "Un ami utilise Moat pour bloquer les apps qui distraient. Pour déverrouiller, désactiver un mur ou quitter le mode gardien, il a besoin d'un code de ta part.", how2: "N'appuie que si tu penses qu'il devrait l'avoir. Chaque code sert une fois. Garde ce lien privé.", how3: "Rien de personnel n'est envoyé. Le code est calculé dans ton navigateur à partir du lien.", okNow: (ago) => `Moat intact · vu ${ago}`, revoked: (ago) => `Accès Temps d'écran retiré ${ago}`, silent: (ago) => `Aucun signal depuis ${ago} — téléphone éteint ou Moat supprimé. Demande.`, none: "Pas encore de signal", off: "Le mode gardien a été désactivé avec ton code", err: "Impossible de vérifier l'état", nokey: "Il manque la clé dans le lien. Demande qu'on te le renvoie.", nocrypto: "Ce navigateur ne peut pas calculer les codes. Essaie Safari ou Chrome.", cta: "Envie de tes propres douves ? Moat pour iPhone — bientôt sur l'App Store.", ago: (m) => m < 1 ? "à l'instant" : m < 60 ? `il y a ${m} min` : m < 2880 ? `il y a ${Math.round(m/60)} h` : `il y a ${Math.round(m/1440)} jours` },
+    pt: { sub: (n) => n ? `Você tem a chave dos muros de ${n}.` : "Você tem a chave dos muros de alguém.", gen: "Gerar código", hint: "Um código de cada vez. Vale até que um mais novo seja usado.", made: (t) => `Gerado às ${t}. Leia em voz alta — ou não.`, howTitle: "Como funciona", how1: "Um amigo usa o Moat para bloquear apps que distraem. Para desbloquear, desligar um muro ou sair do modo guardião, ele precisa de um código seu.", how2: "Aperte só se achar que ele deve receber. Cada código vale uma vez. Mantenha este link privado.", how3: "Nada pessoal é enviado. O código é calculado no seu navegador a partir do próprio link.", okNow: (ago) => `Moat intacto · visto ${ago}`, revoked: (ago) => `Acesso ao Tempo de Uso removido ${ago}`, silent: (ago) => `Sem sinal há ${ago} — celular desligado ou Moat removido. Pergunte.`, none: "Ainda sem sinal", off: "O modo guardião foi desligado com o seu código", err: "Não foi possível verificar o status", nokey: "Falta a chave no link. Peça para enviarem de novo.", nocrypto: "Este navegador não consegue calcular códigos. Tente Safari ou Chrome.", cta: "Quer o seu próprio fosso? Moat para iPhone — em breve na App Store.", ago: (m) => m < 1 ? "agora mesmo" : m < 60 ? `há ${m} min` : m < 2880 ? `há ${Math.round(m/60)} h` : `há ${Math.round(m/1440)} dias` },
+  };
   const params = new URLSearchParams(location.hash.slice(1));
   const s = (params.get("s") || "").toUpperCase().replace(/[^A-Z2-7]/g, "");
   const name = params.get("n");
+  const lang = (params.get("l") || navigator.language || "en").slice(0, 2).toLowerCase();
+  const T = I18N[lang] || I18N.en;
+  document.documentElement.lang = lang;
   const $ = (id) => document.getElementById(id);
-  if (name) $("sub").textContent = "You hold the key to " + name + "'s walls.";
+  $("sub").textContent = T.sub(name);
+  $("gen").textContent = T.gen;
+  $("hint").textContent = T.hint;
+  $("howTitle").textContent = T.howTitle; $("how1").textContent = T.how1; $("how2").textContent = T.how2; $("how3").textContent = T.how3;
+  $("cta").textContent = T.cta;
+
   if (!s || !window.crypto || !crypto.subtle) {
-    $("code").textContent = "—";
-    $("left").innerHTML = '<span class="err">' + (s ? "This browser can't compute codes. Try Safari or Chrome." : "This link is missing its key. Ask for it to be sent again.") + "</span>";
+    $("code").textContent = "—"; $("gen").hidden = true;
+    $("left").innerHTML = '<span class="err">' + (s ? T.nocrypto : T.nokey) + "</span>";
+    $("statusText").textContent = "—";
     return;
   }
   // base32 → bytes
@@ -62,16 +87,39 @@
     const v = ((h[o] & 127) << 24 | (h[o+1] & 255) << 16 | (h[o+2] & 255) << 8 | (h[o+3] & 255)) % 1000000;
     return String(v).padStart(6, "0");
   }
-  let last = -1;
-  async function tick() {
-    const now = Math.floor(Date.now() / 1000);
-    const counter = Math.floor(now / 30);
-    const left = 30 - (now % 30);
-    if (counter !== last) { last = counter; const code = await hotp(counter); $("code").textContent = code.slice(0,3) + " " + code.slice(3); $("copy").hidden = false; $("copy").onclick = () => navigator.clipboard && navigator.clipboard.writeText(code); }
-    $("fill").style.width = (left / 30 * 100) + "%";
-    $("left").textContent = "New code in " + left + " s";
+  // On-demand code: counter = current minute (same as the app).
+  $("gen").onclick = async () => {
+    const counter = Math.floor(Date.now() / 60000);
+    const code = await hotp(counter);
+    $("code").textContent = code.slice(0, 3) + " " + code.slice(3);
+    $("left").textContent = T.made(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+    if (navigator.clipboard) navigator.clipboard.writeText(code).catch(() => {});
+  };
+  // Heartbeat status: id = base32(sha1("moat:" + secret)).slice(0, 32)
+  async function beatId() {
+    const digest = new Uint8Array(await crypto.subtle.digest("SHA-1", new TextEncoder().encode("moat:" + s)));
+    let b = 0, v = 0, out = "";
+    for (const byte of digest) { v = (v << 8) | byte; b += 8; while (b >= 5) { out += B32[(v >>> (b - 5)) & 31]; b -= 5; } }
+    if (b > 0) out += B32[(v << (5 - b)) & 31];
+    return out.slice(0, 32);
   }
-  await tick(); setInterval(tick, 1000);
+  async function status() {
+    try {
+      const id = await beatId();
+      const r = await fetch(`${BEATS}?id=eq.${id}&select=ok,at,v`, { headers: { apikey: KEY } });
+      const rows = await r.json();
+      const dot = $("dot"), txt = $("statusText");
+      if (!rows.length) { txt.textContent = T.none; return; }
+      const row = rows[0];
+      const mins = Math.max(0, Math.round((Date.now() - new Date(row.at).getTime()) / 60000));
+      const ago = T.ago(mins);
+      if (row.v === "off") { txt.textContent = T.off; dot.className = "dot"; return; }
+      if (!row.ok) { txt.textContent = T.revoked(ago); dot.className = "dot warn"; return; }
+      if (mins > 36 * 60) { txt.textContent = T.silent(ago); dot.className = "dot warn"; return; }
+      txt.textContent = T.okNow(ago); dot.className = "dot ok";
+    } catch { $("statusText").textContent = T.err; }
+  }
+  status(); setInterval(status, 60000);
 })();
 </script>
 </body>
