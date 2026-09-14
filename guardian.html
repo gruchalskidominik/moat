@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Moat — Guardian</title>
+<style>
+  body{margin:0;background:#0c0c0d;color:#f3f2ee;font:17px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  main{max-width:520px;margin:0 auto;padding:56px 24px;text-align:center}
+  h1{font-size:28px;letter-spacing:-.6px;margin:0 0 6px}
+  p{color:#c9c8c2;margin:0 0 16px}
+  .muted{color:#7e7e86;font-size:14px}
+  .code{font-size:64px;font-weight:300;letter-spacing:10px;font-variant-numeric:tabular-nums;margin:40px 0 8px;color:#f3f2ee}
+  .ring{height:3px;background:#26262a;border-radius:99px;overflow:hidden;margin:0 auto 32px;max-width:280px}
+  .fill{height:3px;background:#6f8fa8;width:100%;transition:width 1s linear}
+  .box{border:1px solid #26262a;border-radius:16px;padding:20px;text-align:left;background:#151517;margin-top:32px}
+  .box p{margin:0 0 10px;font-size:15px}
+  button{background:#f3f2ee;color:#0c0c0d;border:0;border-radius:12px;height:48px;padding:0 20px;font:600 16px -apple-system,sans-serif;margin-top:8px}
+  .err{color:#c86b5e}
+</style>
+</head>
+<body>
+<main>
+  <h1 id="title">Moat guardian</h1>
+  <p id="sub" class="muted">You hold the key to someone's walls.</p>
+  <div id="app">
+    <div class="code" id="code">······</div>
+    <div class="ring"><div class="fill" id="fill"></div></div>
+    <p class="muted" id="left">Reading link…</p>
+    <button id="copy" hidden>Copy code</button>
+  </div>
+  <div class="box">
+    <p><strong>How this works</strong></p>
+    <p>A friend uses Moat to block distracting apps. When they want to unlock, disable a wall, or turn guardian mode off, they need the 6-digit code shown here.</p>
+    <p>Read it to them only if you think they should have it. Codes change every 30 seconds. Keep this link private — anyone who has it can generate codes.</p>
+    <p class="muted">Nothing is sent anywhere. The code is computed in your browser from the link itself.</p>
+  </div>
+</main>
+<script>
+(async () => {
+  const B32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  const params = new URLSearchParams(location.hash.slice(1));
+  const s = (params.get("s") || "").toUpperCase().replace(/[^A-Z2-7]/g, "");
+  const name = params.get("n");
+  const $ = (id) => document.getElementById(id);
+  if (name) $("sub").textContent = "You hold the key to " + name + "'s walls.";
+  if (!s || !window.crypto || !crypto.subtle) {
+    $("code").textContent = "—";
+    $("left").innerHTML = '<span class="err">' + (s ? "This browser can't compute codes. Try Safari or Chrome." : "This link is missing its key. Ask for it to be sent again.") + "</span>";
+    return;
+  }
+  // base32 → bytes
+  let bits = 0, value = 0; const bytes = [];
+  for (const ch of s) { value = (value << 5) | B32.indexOf(ch); bits += 5; if (bits >= 8) { bytes.push((value >>> (bits - 8)) & 255); bits -= 8; } }
+  const key = await crypto.subtle.importKey("raw", new Uint8Array(bytes), { name: "HMAC", hash: "SHA-1" }, false, ["sign"]);
+  async function hotp(counter) {
+    const msg = new Uint8Array(8); let c = counter;
+    for (let i = 7; i >= 0; i--) { msg[i] = c & 255; c = Math.floor(c / 256); }
+    const h = new Uint8Array(await crypto.subtle.sign("HMAC", key, msg));
+    const o = h[19] & 15;
+    const v = ((h[o] & 127) << 24 | (h[o+1] & 255) << 16 | (h[o+2] & 255) << 8 | (h[o+3] & 255)) % 1000000;
+    return String(v).padStart(6, "0");
+  }
+  let last = -1;
+  async function tick() {
+    const now = Math.floor(Date.now() / 1000);
+    const counter = Math.floor(now / 30);
+    const left = 30 - (now % 30);
+    if (counter !== last) { last = counter; const code = await hotp(counter); $("code").textContent = code.slice(0,3) + " " + code.slice(3); $("copy").hidden = false; $("copy").onclick = () => navigator.clipboard && navigator.clipboard.writeText(code); }
+    $("fill").style.width = (left / 30 * 100) + "%";
+    $("left").textContent = "New code in " + left + " s";
+  }
+  await tick(); setInterval(tick, 1000);
+})();
+</script>
+</body>
+</html>
