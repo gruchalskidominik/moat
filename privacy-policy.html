@@ -18,7 +18,7 @@
 <body>
 <main>
   <h1>Privacy Policy</h1>
-  <p class="muted">Moat for iOS · Last updated: September 14, 2026</p>
+  <p class="muted">Moat for iOS · Last updated: September 15, 2026</p>
 
   <p>Moat is built to collect nothing. This page explains exactly what that means.</p>
 
@@ -26,7 +26,10 @@
   <p>Moat lets you choose apps, app categories and websites and blocks them on a schedule you set, using Apple's Screen Time frameworks (FamilyControls, ManagedSettings and DeviceActivity).</p>
 
   <h2>Data we collect</h2>
-  <p>None. Moat has no user accounts, no analytics, no advertising SDKs, no crash reporting and no servers of its own. The app never sends any data over the network.</p>
+  <p>None that identifies you. Moat has no user accounts, no analytics, no advertising SDKs and no crash reporting. The only network request the app ever makes is the optional guardian heartbeat described below.</p>
+
+  <h2>Guardian mode (optional)</h2>
+  <p>If you choose a guardian, Moat creates a random secret that lives on your phone and in the link you send your guardian. From then on the app periodically sends a small “heartbeat” to a database we host in the EU (Supabase): a random identifier derived from that secret, a timestamp, whether Screen Time access is still granted, and the app version. That is all — no name, no email, no device identifier, no app usage. Your guardian's page reads the same record to show whether Moat is still standing on your phone. Removing the guardian in Settings stops the heartbeats; records are pruned after 90 days.</p>
 
   <h2>Screen Time data</h2>
   <p>When you grant Screen Time access, Apple's frameworks let Moat apply blocks to the apps you selected. Apple deliberately withholds the identity of those apps and any usage data from Moat: the selection is handled by the operating system as opaque tokens. Moat never sees which apps you use, how long, or how often. Your selection and schedules are stored only on your device, in the app's private container.</p>
@@ -50,7 +53,7 @@
   <p>Dominik Gruchalski · <a href="mailto:gruchalskidominik@gmail.com">gruchalskidominik@gmail.com</a></p>
 
   <hr>
-  <p class="muted">Polityka prywatności (PL): Moat nie zbiera żadnych danych. Aplikacja nie ma kont, analityki, reklam ani własnych serwerów i nie wysyła niczego przez sieć. Dane Czasu przed ekranem obsługuje wyłącznie system iOS — Moat nie widzi, z jakich aplikacji korzystasz. Zakupy realizuje Apple. Usunięcie aplikacji usuwa wszystkie jej dane.</p>
+  <p class="muted">Polityka prywatności (PL): Moat nie zbiera danych, które cię identyfikują. Aplikacja nie ma kont, analityki ani reklam. Jedyny ruch sieciowy to opcjonalny „sygnał życia” trybu opiekuna: losowy identyfikator, znacznik czasu, informacja czy dostęp do Czasu przed ekranem jest przyznany i wersja aplikacji — bez imienia, e-maila czy identyfikatora urządzenia. Usunięcie opiekuna w Ustawieniach kończy wysyłkę; rekordy są usuwane po 90 dniach. Dane Czasu przed ekranem obsługuje wyłącznie system iOS — Moat nie widzi, z jakich aplikacji korzystasz. Zakupy realizuje Apple. Usunięcie aplikacji usuwa wszystkie jej dane.</p>
 </main>
 </body>
 </html>
