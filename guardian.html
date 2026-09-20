@@ -4,24 +4,34 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
 <title>Moat Guardian</title>
 <style>
-  body{margin:0;background:#0c0c0d;color:#f3f2ee;font:17px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  body{margin:0;background:#1d1d1d;color:#f3f2ee;font:17px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
   main{max-width:520px;margin:0 auto;padding:48px 24px 64px;text-align:center}
-  h1{font-size:28px;letter-spacing:-.6px;margin:0 0 6px}
+  h1{font-size:28px;letter-spacing:-.6px;margin:0 0 6px;font-weight:700}
+  h2{font-size:15px;letter-spacing:.08em;text-transform:uppercase;color:#8a8a8e;margin:32px 0 12px;font-weight:600}
   p{color:#c9c8c2;margin:0 0 16px}
-  .muted{color:#7e7e86;font-size:14px}
-  .status{display:inline-flex;align-items:center;gap:8px;border:1px solid #26262a;border-radius:999px;padding:6px 14px;font-size:14px;color:#c9c8c2;margin:8px 0 28px}
-  .dot{width:8px;height:8px;border-radius:4px;background:#4a4a50}
-  .dot.ok{background:#7fa88f}.dot.warn{background:#c86b5e}
-  .code{font-size:64px;font-weight:300;letter-spacing:10px;font-variant-numeric:tabular-nums;margin:8px 0 4px;color:#f3f2ee;min-height:80px}
-  .gen{background:#f3f2ee;color:#0c0c0d;border:0;border-radius:14px;height:56px;padding:0 28px;font:600 17px -apple-system,sans-serif;margin:16px 0 8px;cursor:pointer}
-  .gen:active{opacity:.7}
-  .box{border:1px solid #26262a;border-radius:16px;padding:20px;text-align:left;background:#151517;margin-top:32px}
+  .muted{color:#8a8a8e;font-size:14px}
+  .status{display:inline-flex;align-items:center;gap:8px;border:1px solid #3a3a3e;border-radius:999px;padding:6px 14px;font-size:14px;color:#c9c8c2;margin:8px 0 28px}
+  .dot{width:8px;height:8px;border-radius:4px;background:#4e4e50}
+  .dot.ok{background:#7fa88f}.dot.warn{background:#dc0c37}
+  .code{font-size:56px;font-weight:300;letter-spacing:10px;font-variant-numeric:tabular-nums;margin:8px 0 4px;color:#f3f2ee;min-height:72px}
+  .gen{background:#c3073f;color:#f3f2ee;border:0;border-radius:14px;height:56px;padding:0 28px;font:600 17px -apple-system,sans-serif;margin:16px 0 8px;cursor:pointer;width:100%;max-width:320px}
+  .gen:active{opacity:.75}.gen:disabled{opacity:.4}
+  .box{border:1px solid #3a3a3e;border-radius:16px;padding:20px;text-align:left;background:#262628;margin-top:28px}
   .box p{margin:0 0 10px;font-size:15px}
-  .err{color:#c86b5e}
-  a{color:#6f8fa8}
-  .cta{margin-top:28px;font-size:14px;color:#7e7e86}
+  .err{color:#dc0c37}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 16px}
+  .stat{border:1px solid #3a3a3e;border-radius:12px;padding:12px;background:#262628;text-align:left}
+  .stat b{display:block;font-size:22px;font-weight:600;color:#f3f2ee;font-variant-numeric:tabular-nums}
+  .stat span{font-size:12px;color:#8a8a8e;letter-spacing:.04em}
+  .list{text-align:left;margin:0;padding:0;list-style:none}
+  .list li{border-top:1px solid #3a3a3e;padding:10px 0;font-size:14px;color:#c9c8c2}
+  .list li:first-child{border-top:0}
+  .list .when{color:#8a8a8e;font-size:12px}
+  a{color:#c3073f}
+  .cta{margin-top:28px;font-size:14px;color:#8a8a8e}
 </style>
 </head>
 <body>
@@ -34,9 +44,12 @@
   <div id="app">
     <div class="code" id="code">······</div>
     <p class="muted" id="hint"></p>
-    <button class="gen" id="gen"></button>
+    <button class="gen" id="gen" type="button"></button>
     <p class="muted" id="left"></p>
   </div>
+  <h2 id="statsTitle"></h2>
+  <div class="stats" id="stats"></div>
+  <ul class="list" id="events"></ul>
   <div class="box">
     <p><strong id="howTitle"></strong></p>
     <p id="how1"></p>
@@ -49,17 +62,155 @@
 (async () => {
   const B32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   const BEATS = "https://ridvfmatxkgmnkyvndeu.supabase.co/rest/v1/moat_beats";
+  const CODES = "https://ridvfmatxkgmnkyvndeu.supabase.co/rest/v1/moat_codes";
+  const RPC_EVENTS = "https://ridvfmatxkgmnkyvndeu.supabase.co/rest/v1/rpc/moat_guardian_events";
   const KEY = "sb_publishable_AYY6ozK1vI0Dlna1Ujyqjw_RqoP_lxD";
   const I18N = {
-    en: { note: "iOS sends the signal only when it lets apps run in the background. A gap of several hours is normal and does not mean Moat was removed.", sub: (n) => n ? `You hold the key to ${n}'s walls.` : "You hold the key to someone's walls.", gen: "Generate code", hint: "One code at a time. It works for a day, until a newer one is used.", made: (t) => `Generated at ${t}. Read it out loud, or don't.`, howTitle: "How this works", how1: "A friend uses Moat to block distracting apps. To unlock, disable a wall, or turn guardian mode off, they need a code from you.", how2: "Press the button only if you think they should have it. Each code works once. Keep this link private. Anyone with it can generate codes.", how3: "Nothing personal is sent anywhere. The code is computed in your browser from the link itself.", okNow: (ago) => `Moat intact · seen ${ago}`, revoked: (ago) => `Screen Time access removed ${ago}`, silent: (ago) => `No signal for ${ago}. Could be a dead battery or no network. Or Moat is gone. Worth asking.`, quiet: (ago) => `Moat intact · last signal ${ago} (iOS reports in when it can)`, sos: (ago) => `Used the emergency unlock ${ago}: 5 minutes, no code.`, none: "No signal yet", off: "Guardian mode was turned off with your code", err: "Couldn't check status", nokey: "This link is missing its key. Ask for it to be sent again.", nocrypto: "This browser can't compute codes. Try Safari or Chrome.", cta: "Want your own moat? Moat for iPhone is on the App Store.", ago: (m) => m < 1 ? "just now" : m < 60 ? `${m} min ago` : m < 2880 ? `${Math.round(m/60)} h ago` : `${Math.round(m/1440)} days ago` },
-    pl: { note: "iOS wysyła sygnał tylko wtedy, gdy pozwala aplikacjom działać w tle. Przerwa kilku godzin jest normalna i nie oznacza, że Moat został usunięty.", sub: (n) => n ? `Trzymasz klucz do murów ${n}.` : "Trzymasz klucz do czyichś murów.", gen: "Wygeneruj kod", hint: "Jeden kod naraz. Działa przez dobę, dopóki nie zostanie użyty nowszy.", made: (t) => `Wygenerowany o ${t}. Przeczytaj go, albo nie.`, howTitle: "Jak to działa", how1: "Znajomy używa Moat, żeby blokować rozpraszające aplikacje. Żeby odblokować, wyłączyć mur albo tryb opiekuna, potrzebuje kodu od Ciebie.", how2: "Naciśnij przycisk tylko wtedy, gdy uważasz, że powinien go dostać. Każdy kod działa raz. Nie udostępniaj tego linku. Każdy, kto go ma, może generować kody.", how3: "Nic osobistego nie jest nigdzie wysyłane. Kod liczy się w Twojej przeglądarce z samego linku.", okNow: (ago) => `Fosa cała · sygnał ${ago}`, revoked: (ago) => `Dostęp do Czasu przed ekranem cofnięty ${ago}`, silent: (ago) => `Brak sygnału od ${ago}. Może to rozładowana bateria albo brak zasięgu. Albo Moat zniknął. Warto zapytać.`, quiet: (ago) => `Fosa cała · ostatni sygnał ${ago} (iOS melduje się, kiedy może)`, sos: (ago) => `Użyto odblokowania awaryjnego ${ago}: 5 minut, bez kodu.`, none: "Jeszcze brak sygnału", off: "Tryb opiekuna wyłączony Twoim kodem", err: "Nie udało się sprawdzić stanu", nokey: "W linku brakuje klucza. Poproś o wysłanie go jeszcze raz.", nocrypto: "Ta przeglądarka nie potrafi liczyć kodów. Spróbuj Safari lub Chrome.", cta: "Chcesz własną fosę? Moat na iPhone jest w App Store.", ago: (m) => m < 1 ? "przed chwilą" : m < 60 ? `${m} min temu` : m < 2880 ? `${Math.round(m/60)} h temu` : `${Math.round(m/1440)} dni temu` },
-    de: { note: "iOS sendet das Signal nur, wenn es Apps im Hintergrund laufen lässt. Eine Lücke von mehreren Stunden ist normal und heißt nicht, dass Moat gelöscht wurde.", sub: (n) => n ? `Du hältst den Schlüssel zu ${n}s Mauern.` : "Du hältst den Schlüssel zu jemandes Mauern.", gen: "Code erzeugen", hint: "Ein Code auf einmal. Er gilt einen Tag lang, bis ein neuerer benutzt wird.", made: (t) => `Erzeugt um ${t}. Lies ihn vor, oder nicht.`, howTitle: "So funktioniert es", how1: "Ein Freund nutzt Moat, um ablenkende Apps zu sperren. Zum Entsperren, Deaktivieren einer Mauer oder Abschalten des Wächtermodus braucht er einen Code von dir.", how2: "Drücke nur, wenn du findest, dass er ihn bekommen sollte. Jeder Code gilt einmal. Halte diesen Link privat.", how3: "Nichts Persönliches wird gesendet. Der Code wird in deinem Browser aus dem Link berechnet.", okNow: (ago) => `Moat intakt · gesehen ${ago}`, revoked: (ago) => `Bildschirmzeit-Zugriff entfernt ${ago}`, silent: (ago) => `Kein Signal seit ${ago}. Vielleicht leerer Akku oder kein Netz. Oder Moat ist weg. Frag lieber nach.`, quiet: (ago) => `Moat intakt · letztes Signal ${ago} (iOS meldet sich, wenn es kann)`, sos: (ago) => `Notfall-Freigabe genutzt ${ago}: 5 Minuten, ohne Code.`, none: "Noch kein Signal", off: "Wächtermodus wurde mit deinem Code beendet", err: "Status nicht abrufbar", nokey: "Dem Link fehlt der Schlüssel. Lass ihn dir erneut schicken.", nocrypto: "Dieser Browser kann keine Codes berechnen. Versuche Safari oder Chrome.", cta: "Willst du deinen eigenen Burggraben? Moat für iPhone gibt es im App Store.", ago: (m) => m < 1 ? "gerade eben" : m < 60 ? `vor ${m} Min.` : m < 2880 ? `vor ${Math.round(m/60)} Std.` : `vor ${Math.round(m/1440)} Tagen` },
-    es: { note: "iOS envía la señal solo cuando deja que las apps funcionen en segundo plano. Un hueco de varias horas es normal y no significa que Moat se haya eliminado.", sub: (n) => n ? `Tienes la llave de los muros de ${n}.` : "Tienes la llave de los muros de alguien.", gen: "Generar código", hint: "Un código a la vez. Vale un día, hasta que se use uno más nuevo.", made: (t) => `Generado a las ${t}. Léelo en voz alta, o no.`, howTitle: "Cómo funciona", how1: "Un amigo usa Moat para bloquear apps que distraen. Para desbloquear, apagar un muro o desactivar el modo guardián necesita un código tuyo.", how2: "Pulsa solo si crees que debería tenerlo. Cada código sirve una vez. No compartas este enlace.", how3: "No se envía nada personal. El código se calcula en tu navegador a partir del enlace.", okNow: (ago) => `Moat intacto · visto ${ago}`, revoked: (ago) => `Acceso a Tiempo de uso retirado ${ago}`, silent: (ago) => `Sin señal desde ${ago}. Puede ser batería agotada o sin red. O Moat ya no está. Mejor pregunta.`, quiet: (ago) => `Moat intacto · última señal ${ago} (iOS avisa cuando puede)`, sos: (ago) => `Usó el desbloqueo de emergencia ${ago}: 5 minutos, sin código.`, none: "Aún sin señal", off: "El modo guardián se desactivó con tu código", err: "No se pudo comprobar el estado", nokey: "Al enlace le falta la clave. Pide que te lo envíen de nuevo.", nocrypto: "Este navegador no puede calcular códigos. Prueba Safari o Chrome.", cta: "¿Quieres tu propio foso? Moat para iPhone está en el App Store.", ago: (m) => m < 1 ? "ahora mismo" : m < 60 ? `hace ${m} min` : m < 2880 ? `hace ${Math.round(m/60)} h` : `hace ${Math.round(m/1440)} días` },
-    fr: { note: "iOS n'envoie le signal que lorsqu'il laisse les applis tourner en arrière-plan. Un trou de plusieurs heures est normal et ne veut pas dire que Moat a été supprimé.", sub: (n) => n ? `Tu détiens la clé des murs de ${n}.` : "Tu détiens la clé des murs de quelqu'un.", gen: "Générer un code", hint: "Un code à la fois. Il reste valable un jour, jusqu'à ce qu'un plus récent soit utilisé.", made: (t) => `Généré à ${t}. Lis-le à voix haute, ou pas.`, howTitle: "Comment ça marche", how1: "Un ami utilise Moat pour bloquer les apps qui distraient. Pour déverrouiller, désactiver un mur ou quitter le mode gardien, il a besoin d'un code de ta part.", how2: "N'appuie que si tu penses qu'il devrait l'avoir. Chaque code sert une fois. Garde ce lien privé.", how3: "Rien de personnel n'est envoyé. Le code est calculé dans ton navigateur à partir du lien.", okNow: (ago) => `Moat intact · vu ${ago}`, revoked: (ago) => `Accès Temps d'écran retiré ${ago}`, silent: (ago) => `Aucun signal depuis ${ago}. Batterie vide, pas de réseau. Ou Moat a disparu. Mieux vaut demander.`, quiet: (ago) => `Moat intact · dernier signal ${ago} (iOS se manifeste quand il peut)`, sos: (ago) => `Déblocage d’urgence utilisé ${ago} : 5 minutes, sans code.`, none: "Pas encore de signal", off: "Le mode gardien a été désactivé avec ton code", err: "Impossible de vérifier l'état", nokey: "Il manque la clé dans le lien. Demande qu'on te le renvoie.", nocrypto: "Ce navigateur ne peut pas calculer les codes. Essaie Safari ou Chrome.", cta: "Envie de tes propres douves ? Moat pour iPhone est sur l'App Store.", ago: (m) => m < 1 ? "à l'instant" : m < 60 ? `il y a ${m} min` : m < 2880 ? `il y a ${Math.round(m/60)} h` : `il y a ${Math.round(m/1440)} jours` },
-    pt: { note: "O iOS envia o sinal só quando deixa os apps rodarem em segundo plano. Um intervalo de várias horas é normal e não significa que o Moat foi removido.", sub: (n) => n ? `Você tem a chave dos muros de ${n}.` : "Você tem a chave dos muros de alguém.", gen: "Gerar código", hint: "Um código de cada vez. Vale por um dia, até que um mais novo seja usado.", made: (t) => `Gerado às ${t}. Leia em voz alta, ou não.`, howTitle: "Como funciona", how1: "Um amigo usa o Moat para bloquear apps que distraem. Para desbloquear, desligar um muro ou sair do modo guardião, ele precisa de um código seu.", how2: "Aperte só se achar que ele deve receber. Cada código vale uma vez. Mantenha este link privado.", how3: "Nada pessoal é enviado. O código é calculado no seu navegador a partir do próprio link.", okNow: (ago) => `Moat intacto · visto ${ago}`, revoked: (ago) => `Acesso ao Tempo de Uso removido ${ago}`, silent: (ago) => `Sem sinal há ${ago}. Pode ser bateria acabada ou sem rede. Ou o Moat sumiu. Vale perguntar.`, quiet: (ago) => `Moat intacto · último sinal ${ago} (o iOS avisa quando pode)`, sos: (ago) => `Usou o desbloqueio de emergência ${ago}: 5 minutos, sem código.`, none: "Ainda sem sinal", off: "O modo guardião foi desligado com o seu código", err: "Não foi possível verificar o status", nokey: "Falta a chave no link. Peça para enviarem de novo.", nocrypto: "Este navegador não consegue calcular códigos. Tente Safari ou Chrome.", cta: "Quer o seu próprio fosso? Moat para iPhone está na App Store.", ago: (m) => m < 1 ? "agora mesmo" : m < 60 ? `há ${m} min` : m < 2880 ? `há ${Math.round(m/60)} h` : `há ${Math.round(m/1440)} dias` },
+    en: {
+      note: "iOS sends the signal only when it lets apps run in the background. A gap of several hours is normal and does not mean Moat was removed.",
+      sub: (n) => n ? `You hold the key to ${n}'s walls.` : "You hold the key to someone's walls.",
+      gen: "Generate code", hint: "The code works for 10 minutes and only once.",
+      made: (t) => `Generated at ${t}. Read it out loud, or don't.`,
+      countdown: (s) => `Expires in ${s}s`,
+      netFail: "Could not create the code. Check your connection and try again.",
+      howTitle: "How this works",
+      how1: "A friend uses Moat to block distracting apps. To unlock, disable a wall, or turn guardian mode off, they need a one-time code from you.",
+      how2: "Press the button only if you think they should have it. Each code works once for 10 minutes. Keep this link private.",
+      how3: "Nothing personal is sent. Codes and event counts use a hash of this link, not names or phone numbers.",
+      okNow: (ago) => `Moat intact · seen ${ago}`,
+      revoked: (ago) => `Screen Time access removed ${ago}`,
+      silent: (ago) => `No signal for ${ago}. Could be a dead battery or no network. Or Moat is gone. Worth asking.`,
+      quiet: (ago) => `Moat intact · last signal ${ago} (iOS reports in when it can)`,
+      sos: (ago) => `Used the emergency unlock ${ago}: 5 minutes, no code.`,
+      none: "No signal yet", off: "Guardian mode was turned off with your code",
+      err: "Couldn't check status", nokey: "This link is missing its key. Ask for it to be sent again.",
+      nocrypto: "This browser can't create codes. Try Safari or Chrome.",
+      cta: "Want your own moat? Moat for iPhone is on the App Store.",
+      ago: (m) => m < 1 ? "just now" : m < 60 ? `${m} min ago` : m < 2880 ? `${Math.round(m/60)} h ago` : `${Math.round(m/1440)} days ago`,
+      statsTitle: "Last 30 days",
+      sBreath: "Breath unlocks", sCode: "Code unlocks", sEmer: "Emergency", sWalls: "Walls taken down",
+      evEmpty: "No events yet.",
+      kind: {
+        breath_unlock: "Breath unlock", code_unlock: "Code unlock", emergency: "Emergency unlock",
+        wall_off: "Wall off", wall_edit: "Wall edited", wall_delete: "Wall deleted",
+        strict_off: "Strict mode off", drop_all: "All walls dropped", web_off: "Web shield off",
+        guardian_off: "Guardian removed",
+      },
+    },
+    pl: {
+      note: "iOS wysyła sygnał tylko wtedy, gdy pozwala aplikacjom działać w tle. Przerwa kilku godzin jest normalna i nie oznacza, że Moat został usunięty.",
+      sub: (n) => n ? `Trzymasz klucz do murów ${n}.` : "Trzymasz klucz do czyichś murów.",
+      gen: "Wygeneruj kod", hint: "Kod działa 10 minut i tylko raz.",
+      made: (t) => `Wygenerowany o ${t}. Przeczytaj go, albo nie.`,
+      countdown: (s) => `Wygasa za ${s} s`,
+      netFail: "Nie udało się utworzyć kodu. Sprawdź połączenie i spróbuj ponownie.",
+      howTitle: "Jak to działa",
+      how1: "Znajomy używa Moat, żeby blokować rozpraszające aplikacje. Żeby odblokować, wyłączyć mur albo tryb opiekuna, potrzebuje jednorazowego kodu od Ciebie.",
+      how2: "Naciśnij przycisk tylko wtedy, gdy uznasz, że powinien go dostać. Każdy kod działa raz przez 10 minut. Nie udostępniaj tego linku.",
+      how3: "Nic osobistego nie jest wysyłane. Kody i liczniki zdarzeń używają hasza z tego linku, nie imion ani numerów.",
+      okNow: (ago) => `Fosa cała · sygnał ${ago}`,
+      revoked: (ago) => `Dostęp do Czasu przed ekranem cofnięty ${ago}`,
+      silent: (ago) => `Brak sygnału od ${ago}. Może to rozładowana bateria albo brak zasięgu. Albo Moat zniknął. Warto zapytać.`,
+      quiet: (ago) => `Fosa cała · ostatni sygnał ${ago} (iOS melduje się, kiedy może)`,
+      sos: (ago) => `Użyto odblokowania awaryjnego ${ago}: 5 minut, bez kodu.`,
+      none: "Jeszcze brak sygnału", off: "Tryb opiekuna wyłączony Twoim kodem",
+      err: "Nie udało się sprawdzić stanu", nokey: "W linku brakuje klucza. Poproś o wysłanie go jeszcze raz.",
+      nocrypto: "Ta przeglądarka nie potrafi tworzyć kodów. Spróbuj Safari lub Chrome.",
+      cta: "Chcesz własną fosę? Moat na iPhone jest w App Store.",
+      ago: (m) => m < 1 ? "przed chwilą" : m < 60 ? `${m} min temu` : m < 2880 ? `${Math.round(m/60)} h temu` : `${Math.round(m/1440)} dni temu`,
+      statsTitle: "Ostatnie 30 dni",
+      sBreath: "Odblokowania oddechem", sCode: "Odblokowania kodem", sEmer: "Awaryjne", sWalls: "Zdjęte mury",
+      evEmpty: "Brak zdarzeń.",
+      kind: {
+        breath_unlock: "Odblokowanie oddechem", code_unlock: "Odblokowanie kodem", emergency: "Awaryjne",
+        wall_off: "Mur wyłączony", wall_edit: "Mur zmieniony", wall_delete: "Mur usunięty",
+        strict_off: "Tryb ścisły wyłączony", drop_all: "Wszystkie mury zdjęte", web_off: "Tarcza WWW wyłączona",
+        guardian_off: "Opiekun usunięty",
+      },
+    },
+    de: {
+      note: "iOS sendet das Signal nur, wenn es Apps im Hintergrund laufen lässt. Eine Lücke von mehreren Stunden ist normal und heißt nicht, dass Moat gelöscht wurde.",
+      sub: (n) => n ? `Du hältst den Schlüssel zu ${n}s Mauern.` : "Du hältst den Schlüssel zu jemandes Mauern.",
+      gen: "Code erzeugen", hint: "Der Code gilt 10 Minuten und nur einmal.",
+      made: (t) => `Erzeugt um ${t}. Lies ihn vor, oder nicht.`,
+      countdown: (s) => `Läuft in ${s}s ab`,
+      netFail: "Code konnte nicht erzeugt werden. Verbindung prüfen und erneut versuchen.",
+      howTitle: "So funktioniert es",
+      how1: "Ein Freund nutzt Moat, um ablenkende Apps zu sperren. Zum Entsperren braucht er einen einmaligen Code von dir.",
+      how2: "Drücke nur, wenn du findest, dass er ihn bekommen sollte. Jeder Code gilt einmal für 10 Minuten.",
+      how3: "Nichts Persönliches wird gesendet. Codes und Zähler nutzen einen Hash dieses Links.",
+      okNow: (ago) => `Moat intakt · gesehen ${ago}`, revoked: (ago) => `Bildschirmzeit-Zugriff entfernt ${ago}`,
+      silent: (ago) => `Kein Signal seit ${ago}. Vielleicht leerer Akku oder kein Netz. Oder Moat ist weg.`,
+      quiet: (ago) => `Moat intakt · letztes Signal ${ago}`, sos: (ago) => `Notfall-Freigabe genutzt ${ago}.`,
+      none: "Noch kein Signal", off: "Wächtermodus wurde mit deinem Code beendet",
+      err: "Status nicht abrufbar", nokey: "Dem Link fehlt der Schlüssel.", nocrypto: "Dieser Browser kann keine Codes erzeugen.",
+      cta: "Willst du deinen eigenen Burggraben? Moat für iPhone gibt es im App Store.",
+      ago: (m) => m < 1 ? "gerade eben" : m < 60 ? `vor ${m} Min.` : m < 2880 ? `vor ${Math.round(m/60)} Std.` : `vor ${Math.round(m/1440)} Tagen`,
+      statsTitle: "Letzte 30 Tage", sBreath: "Atem-Freigaben", sCode: "Code-Freigaben", sEmer: "Notfall", sWalls: "Mauern gesenkt",
+      evEmpty: "Noch keine Ereignisse.",
+      kind: { breath_unlock: "Atem-Freigabe", code_unlock: "Code-Freigabe", emergency: "Notfall", wall_off: "Mauer aus", wall_edit: "Mauer geändert", wall_delete: "Mauer gelöscht", strict_off: "Streng aus", drop_all: "Alle Mauern weg", web_off: "Web-Schild aus", guardian_off: "Wächter entfernt" },
+    },
+    es: {
+      note: "iOS envía la señal solo cuando deja que las apps funcionen en segundo plano.",
+      sub: (n) => n ? `Tienes la llave de los muros de ${n}.` : "Tienes la llave de los muros de alguien.",
+      gen: "Generar código", hint: "El código vale 10 minutos y solo una vez.",
+      made: (t) => `Generado a las ${t}. Léelo en voz alta, o no.`,
+      countdown: (s) => `Caduca en ${s}s`, netFail: "No se pudo crear el código. Revisa la conexión.",
+      howTitle: "Cómo funciona", how1: "Un amigo usa Moat. Para desbloquear necesita un código de un solo uso tuyo.",
+      how2: "Pulsa solo si crees que debería tenerlo. Cada código vale una vez durante 10 minutos.",
+      how3: "No se envía nada personal. Códigos y contadores usan un hash de este enlace.",
+      okNow: (ago) => `Moat intacto · visto ${ago}`, revoked: (ago) => `Acceso a Tiempo de uso retirado ${ago}`,
+      silent: (ago) => `Sin señal desde ${ago}.`, quiet: (ago) => `Moat intacto · última señal ${ago}`,
+      sos: (ago) => `Usó el desbloqueo de emergencia ${ago}.`, none: "Aún sin señal", off: "El modo guardián se desactivó con tu código",
+      err: "No se pudo comprobar el estado", nokey: "Al enlace le falta la clave.", nocrypto: "Este navegador no puede crear códigos.",
+      cta: "¿Quieres tu propio foso? Moat para iPhone está en el App Store.",
+      ago: (m) => m < 1 ? "ahora mismo" : m < 60 ? `hace ${m} min` : m < 2880 ? `hace ${Math.round(m/60)} h` : `hace ${Math.round(m/1440)} días`,
+      statsTitle: "Últimos 30 días", sBreath: "Desbloqueos con respiración", sCode: "Desbloqueos con código", sEmer: "Emergencia", sWalls: "Muros bajados",
+      evEmpty: "Sin eventos.",
+      kind: { breath_unlock: "Desbloqueo con respiración", code_unlock: "Desbloqueo con código", emergency: "Emergencia", wall_off: "Muro apagado", wall_edit: "Muro editado", wall_delete: "Muro borrado", strict_off: "Modo estricto off", drop_all: "Todos los muros", web_off: "Escudo web off", guardian_off: "Guardián quitado" },
+    },
+    fr: {
+      note: "iOS n'envoie le signal que lorsqu'il laisse les applis tourner en arrière-plan.",
+      sub: (n) => n ? `Tu détiens la clé des murs de ${n}.` : "Tu détiens la clé des murs de quelqu'un.",
+      gen: "Générer un code", hint: "Le code vaut 10 minutes et une seule fois.",
+      made: (t) => `Généré à ${t}. Lis-le à voix haute, ou pas.`,
+      countdown: (s) => `Expire dans ${s}s`, netFail: "Impossible de créer le code. Vérifie la connexion.",
+      howTitle: "Comment ça marche", how1: "Un ami utilise Moat. Pour déverrouiller, il a besoin d'un code à usage unique de ta part.",
+      how2: "N'appuie que si tu penses qu'il devrait l'avoir. Chaque code sert une fois pendant 10 minutes.",
+      how3: "Rien de personnel n'est envoyé. Codes et compteurs utilisent un hash de ce lien.",
+      okNow: (ago) => `Moat intact · vu ${ago}`, revoked: (ago) => `Accès Temps d'écran retiré ${ago}`,
+      silent: (ago) => `Aucun signal depuis ${ago}.`, quiet: (ago) => `Moat intact · dernier signal ${ago}`,
+      sos: (ago) => `Déblocage d’urgence utilisé ${ago}.`, none: "Pas encore de signal", off: "Le mode gardien a été désactivé avec ton code",
+      err: "Impossible de vérifier l'état", nokey: "Il manque la clé dans le lien.", nocrypto: "Ce navigateur ne peut pas créer de codes.",
+      cta: "Envie de tes propres douves ? Moat pour iPhone est sur l'App Store.",
+      ago: (m) => m < 1 ? "à l'instant" : m < 60 ? `il y a ${m} min` : m < 2880 ? `il y a ${Math.round(m/60)} h` : `il y a ${Math.round(m/1440)} jours`,
+      statsTitle: "30 derniers jours", sBreath: "Déblocages respiration", sCode: "Déblocages code", sEmer: "Urgence", sWalls: "Murs baissés",
+      evEmpty: "Aucun événement.",
+      kind: { breath_unlock: "Déblocage respiration", code_unlock: "Déblocage code", emergency: "Urgence", wall_off: "Mur off", wall_edit: "Mur modifié", wall_delete: "Mur supprimé", strict_off: "Strict off", drop_all: "Tous les murs", web_off: "Bouclier web off", guardian_off: "Gardien retiré" },
+    },
+    pt: {
+      note: "O iOS envia o sinal só quando deixa os apps rodarem em segundo plano.",
+      sub: (n) => n ? `Você tem a chave dos muros de ${n}.` : "Você tem a chave dos muros de alguém.",
+      gen: "Gerar código", hint: "O código vale 10 minutos e só uma vez.",
+      made: (t) => `Gerado às ${t}. Leia em voz alta, ou não.`,
+      countdown: (s) => `Expira em ${s}s`, netFail: "Não foi possível criar o código. Verifique a ligação.",
+      howTitle: "Como funciona", how1: "Um amigo usa o Moat. Para desbloquear precisa de um código de uso único seu.",
+      how2: "Aperte só se achar que ele deve receber. Cada código vale uma vez por 10 minutos.",
+      how3: "Nada pessoal é enviado. Códigos e contagens usam um hash deste link.",
+      okNow: (ago) => `Moat intacto · visto ${ago}`, revoked: (ago) => `Acesso ao Tempo de Uso removido ${ago}`,
+      silent: (ago) => `Sem sinal há ${ago}.`, quiet: (ago) => `Moat intacto · último sinal ${ago}`,
+      sos: (ago) => `Usou o desbloqueio de emergência ${ago}.`, none: "Ainda sem sinal", off: "O modo guardião foi desligado com o seu código",
+      err: "Não foi possível verificar o status", nokey: "Falta a chave no link.", nocrypto: "Este navegador não consegue criar códigos.",
+      cta: "Quer o seu próprio fosso? Moat para iPhone está na App Store.",
+      ago: (m) => m < 1 ? "agora mesmo" : m < 60 ? `há ${m} min` : m < 2880 ? `há ${Math.round(m/60)} h` : `há ${Math.round(m/1440)} dias`,
+      statsTitle: "Últimos 30 dias", sBreath: "Desbloqueios com respiração", sCode: "Desbloqueios com código", sEmer: "Emergência", sWalls: "Muros derrubados",
+      evEmpty: "Sem eventos.",
+      kind: { breath_unlock: "Desbloqueio com respiração", code_unlock: "Desbloqueio com código", emergency: "Emergência", wall_off: "Muro off", wall_edit: "Muro editado", wall_delete: "Muro apagado", strict_off: "Modo rígido off", drop_all: "Todos os muros", web_off: "Escudo web off", guardian_off: "Guardião removido" },
+    },
   };
+
   const params = new URLSearchParams(location.hash.slice(1));
-  const s = (params.get("s") || "").toUpperCase().replace(/[^A-Z2-7]/g, "");
+  const raw = (params.get("k") || params.get("s") || "").toUpperCase().replace(/[^A-Z2-7]/g, "");
   const name = params.get("n");
   const lang = (params.get("l") || navigator.language || "en").slice(0, 2).toLowerCase();
   const T = I18N[lang] || I18N.en;
@@ -68,44 +219,83 @@
   $("sub").textContent = T.sub(name);
   $("gen").textContent = T.gen;
   $("hint").textContent = T.hint;
-  $("howTitle").textContent = T.howTitle; $("how1").textContent = T.how1; $("how2").textContent = T.how2; $("how3").textContent = T.how3;
+  $("howTitle").textContent = T.howTitle;
+  $("how1").textContent = T.how1; $("how2").textContent = T.how2; $("how3").textContent = T.how3;
   $("cta").textContent = T.cta;
   $("note").textContent = T.note;
+  $("statsTitle").textContent = T.statsTitle;
 
-  if (!s || !window.crypto || !crypto.subtle) {
+  if (!raw || !window.crypto || !crypto.subtle) {
     $("code").textContent = "—"; $("gen").hidden = true;
-    $("left").innerHTML = '<span class="err">' + (s ? T.nocrypto : T.nokey) + "</span>";
+    $("left").innerHTML = '<span class="err">' + (raw ? T.nocrypto : T.nokey) + "</span>";
     $("statusText").textContent = "—";
     return;
   }
-  // base32 → bytes
+
   let bits = 0, value = 0; const bytes = [];
-  for (const ch of s) { value = (value << 5) | B32.indexOf(ch); bits += 5; if (bits >= 8) { bytes.push((value >>> (bits - 8)) & 255); bits -= 8; } }
-  const key = await crypto.subtle.importKey("raw", new Uint8Array(bytes), { name: "HMAC", hash: "SHA-1" }, false, ["sign"]);
-  async function hotp(counter) {
-    const msg = new Uint8Array(8); let c = counter;
-    for (let i = 7; i >= 0; i--) { msg[i] = c & 255; c = Math.floor(c / 256); }
-    const h = new Uint8Array(await crypto.subtle.sign("HMAC", key, msg));
-    const o = h[19] & 15;
-    const v = ((h[o] & 127) << 24 | (h[o+1] & 255) << 16 | (h[o+2] & 255) << 8 | (h[o+3] & 255)) % 1000000;
-    return String(v).padStart(6, "0");
+  for (const ch of raw) {
+    value = (value << 5) | B32.indexOf(ch); bits += 5;
+    if (bits >= 8) { bytes.push((value >>> (bits - 8)) & 255); bits -= 8; }
   }
-  // On-demand code: counter = current minute (same as the app).
-  $("gen").onclick = async () => {
-    const counter = Math.floor(Date.now() / 60000);
-    const code = await hotp(counter);
-    $("code").textContent = code.slice(0, 3) + " " + code.slice(3);
-    $("left").textContent = T.made(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
-    if (navigator.clipboard) navigator.clipboard.writeText(code).catch(() => {});
-  };
-  // Heartbeat status: id = base32(sha1("moat:" + secret)).slice(0, 32)
+
   async function beatId() {
-    const digest = new Uint8Array(await crypto.subtle.digest("SHA-1", new TextEncoder().encode("moat:" + s)));
+    const digest = new Uint8Array(await crypto.subtle.digest("SHA-1", new TextEncoder().encode("moat:" + raw)));
     let b = 0, v = 0, out = "";
-    for (const byte of digest) { v = (v << 8) | byte; b += 8; while (b >= 5) { out += B32[(v >>> (b - 5)) & 31]; b -= 5; } }
+    for (const byte of digest) {
+      v = (v << 8) | byte; b += 8;
+      while (b >= 5) { out += B32[(v >>> (b - 5)) & 31]; b -= 5; }
+    }
     if (b > 0) out += B32[(v << (5 - b)) & 31];
     return out.slice(0, 32);
   }
+
+  async function codeHash(code) {
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw + ":" + code));
+    return [...new Uint8Array(buf)].map((x) => x.toString(16).padStart(2, "0")).join("");
+  }
+
+  function randomCode() {
+    const a = new Uint32Array(1);
+    crypto.getRandomValues(a);
+    return String(a[0] % 1000000).padStart(6, "0");
+  }
+
+  let expireTimer = null;
+  $("gen").onclick = async () => {
+    $("gen").disabled = true;
+    $("left").textContent = "";
+    try {
+      const code = randomCode();
+      const hash = await codeHash(code);
+      const id = await beatId();
+      const expires = new Date(Date.now() + 10 * 60_000).toISOString();
+      const r = await fetch(CODES, {
+        method: "POST",
+        headers: {
+          apikey: KEY, Authorization: "Bearer " + KEY,
+          "Content-Type": "application/json", Prefer: "return=minimal",
+        },
+        body: JSON.stringify({ id, code_hash: hash, expires_at: expires }),
+      });
+      if (!r.ok) throw new Error("insert");
+      $("code").textContent = code.slice(0, 3) + " " + code.slice(3);
+      $("left").textContent = T.made(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+      if (navigator.clipboard) navigator.clipboard.writeText(code).catch(() => {});
+      const end = Date.now() + 10 * 60_000;
+      if (expireTimer) clearInterval(expireTimer);
+      expireTimer = setInterval(() => {
+        const left = Math.max(0, Math.ceil((end - Date.now()) / 1000));
+        $("hint").textContent = left ? T.countdown(left) : T.hint;
+        if (!left) clearInterval(expireTimer);
+      }, 250);
+    } catch {
+      $("code").textContent = "······";
+      $("left").innerHTML = '<span class="err">' + T.netFail + "</span>";
+    } finally {
+      $("gen").disabled = false;
+    }
+  };
+
   async function status() {
     try {
       const id = await beatId();
@@ -125,7 +315,51 @@
       txt.textContent = T.okNow(ago); dot.className = "dot ok";
     } catch { $("statusText").textContent = T.err; }
   }
-  status(); setInterval(status, 60000);
+
+  async function loadEvents() {
+    try {
+      const id = await beatId();
+      const since = new Date(Date.now() - 30 * 86400000).toISOString();
+      // Client-side retention: ignore events older than 90 days if cron is absent.
+      const hard = new Date(Date.now() - 90 * 86400000).toISOString();
+      const r = await fetch(`${RPC_EVENTS}`, {
+        method: "POST",
+        headers: { apikey: KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ p_id: id }),
+      });
+      let rows = await r.json();
+      if (!Array.isArray(rows)) rows = [];
+      rows = rows.filter((e) => e.at >= since);
+      const wallKinds = new Set(["wall_off", "wall_delete", "drop_all"]);
+      let breath = 0, code = 0, emer = 0, walls = 0;
+      for (const e of rows) {
+        if (e.kind === "breath_unlock") breath++;
+        else if (e.kind === "code_unlock") code++;
+        else if (e.kind === "emergency") emer++;
+        if (wallKinds.has(e.kind)) walls++;
+      }
+      $("stats").innerHTML = [
+        ["sBreath", breath], ["sCode", code], ["sEmer", emer], ["sWalls", walls],
+      ].map(([k, n]) => `<div class="stat"><b>${n}</b><span>${T[k]}</span></div>`).join("");
+      const list = rows.slice(0, 20);
+      if (!list.length) {
+        $("events").innerHTML = `<li class="muted">${T.evEmpty}</li>`;
+        return;
+      }
+      $("events").innerHTML = list.map((e) => {
+        const label = (T.kind[e.kind] || e.kind) + (e.wall ? ` · ${e.wall}` : "");
+        const when = new Date(e.at).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+        return `<li><div>${label}</div><div class="when">${when}</div></li>`;
+      }).join("");
+    } catch {
+      $("stats").innerHTML = "";
+      $("events").innerHTML = `<li class="err">${T.err}</li>`;
+    }
+  }
+
+  status(); loadEvents();
+  setInterval(status, 60000);
+  setInterval(loadEvents, 120000);
 })();
 </script>
 </body>
